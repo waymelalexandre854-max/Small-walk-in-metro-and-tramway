@@ -1,0 +1,31 @@
+def format_time(seconds):
+    """Converts seconds into string."""
+    m, s = divmod(seconds, 60)
+    if m == 0:
+        return f"{s} second{'s' if s != 1 else ''}"
+    if s == 0:
+        return f"{m} minute{'s' if m != 1 else ''}"
+    return f"{m} minute{'s' if m != 1 else ''} {s} second{'s' if s != 1 else ''}"
+
+def print_route(steps, total_time):
+    """Prints detailed itinerary: header, step-by-step actions, footer with total time."""
+    print("\n  " + "─" * 50)  # Visual separator
+    for step in steps:
+        if step["action"] == "board":
+            print(f"  🚉 Board at {step['station']}, line {step['line']}")
+        elif step["action"] == "ride":
+            print(f"     Continue through {step['station']}")
+        elif step["action"] == "transfer":
+            print(f"  🔄 Transfer at {step['station']}: line {step['from_line']} → line {step['to_line']}")
+        elif step["action"] == "alight":
+            print(f"  🏁 Alight at {step['station']}, line {step['line']}")
+    print("  " + "─" * 50)
+    print(f"  ⏱  Total time: {format_time(total_time)}\n")
+
+def print_bfs_route(stations):
+    """Prints BFS path with stop count and directional arrows between stations."""
+    print(f"\n  BFS path ({len(stations) - 1} stop{'s' if len(stations) > 2 else ''}):")
+    for i, s in enumerate(stations):
+        prefix = "  🚉" if i == 0 else ("  🏁" if i == len(stations) - 1 else "     →")
+        print(f"{prefix} {s}")
+    print() 
