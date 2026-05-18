@@ -227,7 +227,7 @@ def print_bfs_route(stations):
 
 
 
-def pick_station(graph: TransportGraph, role: str) -> str:
+def pick_station(graph, role):
     """Prompt the user for a station name with auto-suggestion support."""
     sorted_stations = sorted(graph.stations)
     while True:
