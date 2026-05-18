@@ -207,20 +207,20 @@ def print_route(steps, total_time):
     print("\n  " + "─" * 50)  # Visual separator
     for step in steps:
         if step["action"] == "board":
-            print(f"  🚉 Board at {step['station']}, line {step['line']}")
+            print(f"   Board at {step['station']}, line {step['line']}")
         elif step["action"] == "ride":
             print(f"     Continue through {step['station']}")
         elif step["action"] == "transfer":
-            print(f"  🔄 Transfer at {step['station']}: line {step['from_line']} → line {step['to_line']}")
+            print(f"   Transfer at {step['station']}: line {step['from_line']} → line {step['to_line']}")
         elif step["action"] == "alight":
-            print(f"  🏁 Alight at {step['station']}, line {step['line']}")
+            print(f"   Alight at {step['station']}, line {step['line']}")
     print("  " + "─" * 50)
-    print(f"  ⏱  Total time: {format_time(total_time)}\n")
+    print(f"   Total time: {format_time(total_time)}\n")
 
 def print_bfs_route(stations):
     """Prints BFS path with stop count and directional arrows between stations."""
     print(f"\n  BFS path ({len(stations) - 1} stop{'s' if len(stations) > 2 else ''}):")
     for i, s in enumerate(stations):
-        prefix = "  🚉" if i == 0 else ("  🏁" if i == len(stations) - 1 else "     →")
+        prefix = "  " if i == 0 else ("  " if i == len(stations) - 1 else "     →")
         print(f"{prefix} {s}")
     print()
