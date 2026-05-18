@@ -86,7 +86,7 @@ class TransportGraph:
 
 
 from collections import deque
-# On assume que cette partie hérite ou complète la classe TransportGraph
+# It is assumed that this part inherits from or extends the TransportGraph class.
 
 def bfs(self, start, end):
     """Returns the path with fewest stops, or None if unreachable (O(V + E))."""
