@@ -82,3 +82,68 @@ class TransportGraph:
 
     def nodes_for_station(self, station: str) -> list[tuple]:
         return [n for n in self.all_nodes() if n[0] == station]
+
+
+
+
+
+
+import heapq             # for the priority queue 
+from collections import defaultdict       # for initializing distances to infinity
+
+def dijkstra(self, start: str, end: str):
+    """Dijkstra's algorithm using priority queue to find fastest path."""
+    INF = float("inf")
+    dist: dict[tuple, float] = defaultdict(lambda: INF)  # All nodes start at infinite distance
+    prev: dict[tuple, tuple | None] = {}  # Track path for reconstruction
+    heap = []  # Priority queue: (cost, node)
+
+    for sn in self.nodes_for_station(start):
+        dist[sn] = 0
+        prev[sn] = None
+        heapq.heappush(heap, (0, sn))
+
+    while heap:
+        cost, node = heapq.heappop(heap)  # Always expand lowest-cost node first
+        if node[0] == end:
+            break
+        if cost > dist[node]:
+            continue  # Skip if we found a better path already
+        for neighbour, weight, _ in self.adj[node]:
+            new_cost = cost + weight
+            if new_cost < dist[neighbour]:
+                dist[neighbour] = new_cost  # Update distance
+                prev[neighbour] = node  # Track path
+                heapq.heappush(heap, (new_cost, neighbour))
+
+    end_nodes = self.nodes_for_station(end)
+    best = min(end_nodes, key=lambda n: dist[n], default=None)
+    if best is None or dist[best] == INF:
+        return None, None
+
+    # Reconstruct path from end to start
+    path, cur = [], best
+    while cur is not None:
+        path.append(cur)
+        cur = prev.get(cur)
+    path.reverse()
+
+    return int(dist[best]), self._build_steps(path)
+
+def _build_steps(self, path: list[tuple]) -> list[dict]:
+    """Convert node path to transit actions: board, ride, transfer, alight."""
+    if not path:
+        return []
+    steps = [{"action": "board", "station": path[0][0], "line": path[0][1]}]
+
+    for i in range(1, len(path)):
+        prev_station, prev_line = path[i - 1]
+        curr_station, curr_line = path[i]
+        # Transfer if same station but different line
+        if curr_station == prev_station and curr_line != prev_line:
+            steps.append({"action": "transfer", "station": curr_station, "from_line": prev_line, "to_line": curr_line})
+        else:
+            steps.append({"action": "ride", "station": curr_station, "line": curr_line})
+
+    steps[-1]["action"] = "alight"  # Last action is always alighting
+    return steps
