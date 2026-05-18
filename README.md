@@ -1,7 +1,9 @@
 # Small-walk-in-metro-and-tramway
 
 
-
+**Requiered python library:**
+Json
+collections
 **Problem to solve:**
 As part of the Eco'Prepa plan, we neeed to develop an offline public transport route planner for Paris, Bordeaux, Lille, and Lyon that calculates the optimal path between any two stations based on travel time, including transfer penalties (120 seconds per transfer). The system must be generic: adding a new city requires only a new JSON data file, with no external APIs or automatic code generation tools.
 
