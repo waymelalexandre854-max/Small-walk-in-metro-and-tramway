@@ -14,7 +14,7 @@ class TransportGraph:
         self.lines: dict[str, dict] = {}
         self.transfer_stations: dict[str, list] = {}  #key = station name, value= list of lines going through the station
 
-    def load_from_json(self, filepath: str) -> bool:
+    def load_from_json(self, filepath):
         """Read a city JSON file and build the graph structure."""
         try:
             with open(filepath, encoding="utf-8") as f:
@@ -74,21 +74,21 @@ class TransportGraph:
         print(f"Loaded: {len(self.stations)} stations, {len(self.lines)} lines.")
         return True
 
-    def all_nodes(self) -> list[tuple]:
+    def all_nodes(self):
         nodes = set(self.adj.keys())
         for neighbours in self.adj.values():
             for nb, _, _ in neighbours:
                 nodes.add(nb)
         return list(nodes)
 
-    def nodes_for_station(self, station: str) -> list[tuple]:
+    def nodes_for_station(self, station):
         return [n for n in self.all_nodes() if n[0] == station]
 
 
 from collections import deque
 # On assume que cette partie hérite ou complète la classe TransportGraph
 
-def bfs(self, start: str, end: str) -> list[str] | None:
+def bfs(self, start, end):
     """Returns the path with fewest stops, or None if unreachable (O(V + E))."""
     visited: set[tuple] = set()
     queue: deque = deque()
@@ -108,7 +108,7 @@ def bfs(self, start: str, end: str) -> list[str] | None:
 
     return None
 
-def dfs(self, start: str) -> set[str]:
+def dfs(self, start):
     """Returns all physical stations reachable from start (iterative DFS)."""
     visited: set[tuple] = set()
     stack = list(self.nodes_for_station(start))
@@ -124,7 +124,7 @@ def dfs(self, start: str) -> set[str]:
 
     return {n[0] for n in visited}
 
-def is_fully_connected(self) -> bool:
+def is_fully_connected(self):
     """True if every station is reachable from any other station."""
     if not self.adj:
         return True
@@ -135,7 +135,7 @@ def is_fully_connected(self) -> bool:
 import heapq             # for the priority queue 
 from collections import defaultdict       # for initializing distances to infinity
 
-def dijkstra(self, start: str, end: str):
+def dijkstra(self, start, end):
     """Dijkstra's algorithm using priority queue to find fastest path."""
     INF = float("inf")
     dist: dict[tuple, float] = defaultdict(lambda: INF)  # All nodes start at infinite distance
@@ -174,7 +174,7 @@ def dijkstra(self, start: str, end: str):
 
     return int(dist[best]), self._build_steps(path)
 
-def _build_steps(self, path: list[tuple]) -> list[dict]:
+def _build_steps(self, path):
     """Convert node path to transit actions: board, ride, transfer, alight."""
     if not path:
         return []
@@ -191,3 +191,36 @@ def _build_steps(self, path: list[tuple]) -> list[dict]:
 
     steps[-1]["action"] = "alight"  # Last action is always alighting
     return steps
+
+
+def format_time(seconds):
+    """Converts seconds into a string with proper pluralization."""
+    m, s = divmod(seconds, 60)
+    if m == 0:
+        return f"{s} second{'s' if s != 1 else ''}"
+    if s == 0:
+        return f"{m} minute{'s' if m != 1 else ''}"
+    return f"{m} minute{'s' if m != 1 else ''} {s} second{'s' if s != 1 else ''}"
+
+def print_route(steps, total_time):
+    """Prints detailed itinerary: header, step-by-step actions, footer with total time."""
+    print("\n  " + "─" * 50)  # Visual separator
+    for step in steps:
+        if step["action"] == "board":
+            print(f"  🚉 Board at {step['station']}, line {step['line']}")
+        elif step["action"] == "ride":
+            print(f"     Continue through {step['station']}")
+        elif step["action"] == "transfer":
+            print(f"  🔄 Transfer at {step['station']}: line {step['from_line']} → line {step['to_line']}")
+        elif step["action"] == "alight":
+            print(f"  🏁 Alight at {step['station']}, line {step['line']}")
+    print("  " + "─" * 50)
+    print(f"  ⏱  Total time: {format_time(total_time)}\n")
+
+def print_bfs_route(stations):
+    """Prints BFS path with stop count and directional arrows between stations."""
+    print(f"\n  BFS path ({len(stations) - 1} stop{'s' if len(stations) > 2 else ''}):")
+    for i, s in enumerate(stations):
+        prefix = "  🚉" if i == 0 else ("  🏁" if i == len(stations) - 1 else "     →")
+        print(f"{prefix} {s}")
+    print()
