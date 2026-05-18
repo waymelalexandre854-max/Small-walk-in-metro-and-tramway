@@ -224,3 +224,99 @@ def print_bfs_route(stations):
         prefix = "  " if i == 0 else ("  " if i == len(stations) - 1 else "     →")
         print(f"{prefix} {s}")
     print()
+
+
+
+def pick_station(graph: TransportGraph, role: str) -> str:
+    """Prompt the user for a station name with auto-suggestion support."""
+    sorted_stations = sorted(graph.stations)
+    while True:
+        raw = input(f"  {role} station: ").strip()
+        if raw in graph.stations:
+            return raw
+        matches = [s for s in sorted_stations if raw.lower() in s.lower()]
+        if len(matches) == 1:
+            print(f"  → Interpreted as: {matches[0]}")
+            return matches[0]
+        if matches:
+            print("  Did you mean:")
+            for m in matches[:6]:
+                print(f"     • {m}")
+        else:
+            print("  Station not found.")
+            if raw.lower() == "list":
+                for s in sorted_stations:
+                    print(f"     • {s}")
+
+
+def main():
+    print("\n      ESME Metro & Tramway Route Planner        \n")
+    filepath = input("  JSON file to load (e.g. paris.json): ").strip()
+
+    graph = TransportGraph()
+    # Note : Dans une architecture de fichiers séparés, assurez-vous d'attacher
+    # les fonctions BFS, DFS et Dijkstra à la classe TransportGraph.
+   
+    if not graph.load_from_json(filepath):
+        return
+
+    if graph.is_fully_connected():
+        print("  Network is fully connected.\n")
+    else:
+        print("   Network is NOT fully connected.\n")
+
+    while True:
+        print("  ── Menu ─────────────────────────────────────────")
+        print("    [1] Find fastest route         (Dijkstra)")
+        print("    [2] Find route with fewest stops (BFS)")
+        print("    [3] Check connectivity           (DFS)")
+        print("    [4] List transfer stations")
+        print("    [0] Quit")
+
+        choice = input("\n  Your choice: ").strip()
+
+        if choice == "0":
+            print("\n  Goodbye! \n")
+            break
+        elif choice == "1":
+            start = pick_station(graph, "Departure")
+            end = pick_station(graph, "Arrival")
+            if start == end:
+                print("  You are already there!\n")
+                continue
+            time_sec, steps = graph.dijkstra(start, end)
+            if steps:
+                print_route(steps, time_sec)
+            else:
+                print("  No route found.\n")
+        elif choice == "2":
+            start = pick_station(graph, "Departure")
+            end = pick_station(graph, "Arrival")
+            if start == end:
+                print("  You are already there!\n")
+                continue
+            path = graph.bfs(start, end)
+            if path:
+                print_bfs_route(path)
+            else:
+                print("  No route found.\n")
+        elif choice == "3":
+            if graph.is_fully_connected():
+                print("  All stations are reachable from any other station.\n")
+            else:
+                start = next(iter(graph.stations))
+                unreachable = graph.stations - graph.dfs(start)
+                print(f"  {len(unreachable)} unreachable station(s):")
+                for s in sorted(unreachable):
+                    print(f"      • {s}")
+                print()
+        elif choice == "4":
+            print("\n  Transfer stations:")
+            for station, lines in sorted(graph.transfer_stations.items()):
+                print(f"  {station} — lines: {', '.join(lines)}")
+            print()
+        else:
+            print(" Unknown option.\n")
+
+if __name__ == "__main__":
+    main()
