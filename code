@@ -84,8 +84,51 @@ class TransportGraph:
         return [n for n in self.all_nodes() if n[0] == station]
 
 
+from collections import deque
+# On assume que cette partie hérite ou complète la classe TransportGraph
 
+def bfs(self, start: str, end: str) -> list[str] | None:
+    """Returns the path with fewest stops, or None if unreachable (O(V + E))."""
+    visited: set[tuple] = set()
+    queue: deque = deque()
 
+    for sn in self.nodes_for_station(start):
+        queue.append((sn, [start]))
+        visited.add(sn)
+
+    while queue:
+        node, path = queue.popleft()
+        if node[0] == end:
+            return path
+        for neighbour, _, _ in self.adj[node]:
+            if neighbour not in visited:
+                visited.add(neighbour)
+                queue.append((neighbour, path + [neighbour[0]]))
+
+    return None
+
+def dfs(self, start: str) -> set[str]:
+    """Returns all physical stations reachable from start (iterative DFS)."""
+    visited: set[tuple] = set()
+    stack = list(self.nodes_for_station(start))
+
+    while stack:
+        node = stack.pop()
+        if node in visited:
+            continue
+        visited.add(node)
+        for neighbour, _, _ in self.adj[node]:
+            if neighbour not in visited:
+                stack.append(neighbour)
+
+    return {n[0] for n in visited}
+
+def is_fully_connected(self) -> bool:
+    """True if every station is reachable from any other station."""
+    if not self.adj:
+        return True
+    start = next(iter(self.adj))[0]
+    return self.dfs(start) == self.stations
 
 
 import heapq             # for the priority queue 
