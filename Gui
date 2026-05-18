@@ -1,0 +1,199 @@
+import sys
+from PyQt5.QtWidgets import *
+from Code import TransportGraph  
+
+class MetroApp(QWidget):
+    """
+    Main window for the metro application layout. 
+    Handles switching between screens, displaying routes, and interacting 
+    with the backend graph logic. Inherits from QWidget to create the main app instance.
+    """
+    def __init__(self, g):
+        """ 
+        Constructor for MetroApp. Initiaizes graph and builds the UI layouts.
+        """
+        super().__init__()
+        # initiaized graph and stacked widget to hold different views
+        self.g = g
+        self.stack = QStackedWidget()
+        
+        # creating screens
+        menu = QWidget()
+        rout = QWidget()
+        info = QWidget()
+        
+        ml = QVBoxLayout(menu)
+        rl = QVBoxLayout(rout)
+        il = QVBoxLayout(info)
+        
+        # MAIN MENU 
+        btn_fast = QPushButton("Fastest Route (Dijkstra)")
+        btn_fast.clicked.connect(lambda: self.nav(1, 1))
+        ml.addWidget(btn_fast)
+        
+        btn_stops = QPushButton("Fewer Stops (BFS)")
+        btn_stops.clicked.connect(lambda: self.nav(1, 0))
+        ml.addWidget(btn_stops)
+        
+        btn_conn = QPushButton("Network Connectivity")
+        btn_conn.clicked.connect(lambda: self.nav(2, txt="Connected" if self.g.is_fully_connected() else "Disconnected"))
+        ml.addWidget(btn_conn)
+        
+        btn_trans = QPushButton("All Transfer Stations")
+        transfer_text = "\n".join(f"{k}: {v}" for k, v in self.g.transfer_stations.items())
+        btn_trans.clicked.connect(lambda: self.nav(2, txt=transfer_text))
+        ml.addWidget(btn_trans)
+        
+        #ROUTE MENU
+        # separate combo boxes for easy access
+        self.ls = QComboBox()  # line start
+        self.ss = QComboBox()  # station start
+        self.le = QComboBox()  # line end
+        self.se = QComboBox()  # station end
+        
+        # safety check if json file is emty or corrupted
+        L = sorted(self.g.lines.keys()) if self.g.lines else []
+        if L:
+            self.ls.addItems(L)
+            self.le.addItems(L)
+            
+            # connect text changes to helper functions
+            self.ls.currentTextChanged.connect(self.update_start_stations)
+            self.le.currentTextChanged.connect(self.update_end_stations)
+            
+            # trigger first update manually
+            self.update_start_stations(L[0])
+            self.update_end_stations(L[0])
+        
+        self.out_r = QTextEdit()
+        self.out_r.setReadOnly(True)
+        
+        self.out_i = QTextEdit()
+        self.out_i.setReadOnly(True)
+        
+        btn_go = QPushButton("Search Route")
+        btn_go.clicked.connect(self.calc)
+        
+        # adding widgets to route layout
+        rl.addWidget(QLabel("Departure Line/Station:"))
+        rl.addWidget(self.ls)
+        rl.addWidget(self.ss)
+        rl.addWidget(QLabel("Arrival Line/Station:"))
+        rl.addWidget(self.le)
+        rl.addWidget(self.se)
+        rl.addWidget(btn_go)
+        rl.addWidget(self.out_r)
+        rl.addWidget(self.btn_b())
+        
+        # INFO MENU
+        il.addWidget(self.out_i)
+        il.addWidget(self.btn_b())
+        
+        #  ASSEMBLING EVERYTHING 
+        self.stack.addWidget(menu)
+        self.stack.addWidget(rout)
+        self.stack.addWidget(info)
+        
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(self.stack)
+        self.setLayout(main_layout)
+        
+        # styles for app look
+        self.setStyleSheet("QWidget{background:#2c3e50;color:white;font-size:14px;} QPushButton{background:#27ae60;padding:8px;} QTextEdit{background:#ecf0f1;color:#2c3e50;}")
+        self.resize(400, 600)
+
+    def update_start_stations(self, line_name):
+        """ 
+        Update starting station combobox when user selects a new line.
+        Clears old staions and fetches new ones from graph.
+        """
+        self.ss.clear()
+        stations = self.g.lines[line_name].get("stations", [])
+        self.ss.addItems(stations)
+
+    def update_end_stations(self, line_name):
+        """ 
+        Update ending station combobox when destination line changes.
+        Ensures user cant select a staion that doesnt exist on the choosen line.
+        """
+        self.se.clear()
+        stations = self.g.lines[line_name].get("stations", [])
+        self.se.addItems(stations)
+
+    def btn_b(self):
+        """ 
+        Helper function that reurns a configured back button.
+        """
+        b = QPushButton("Back to Menu")
+        b.clicked.connect(lambda: self.stack.setCurrentIndex(0))
+        return b
+        
+    def nav(self, index, is_dij=None, txt=""):
+        """ 
+        Navigate between different screens of the stacked widget and reset UI values.
+        """
+        self.is_dij = is_dij
+        self.out_r.clear()
+        self.out_i.setText(txt)
+        self.stack.setCurrentIndex(index)
+        
+    def calc(self):
+        """ 
+        Calulate path between stations using choosen algorithm (Dijkstra or BFS).
+        Formats the reurned path or shows an error.
+        """
+        s = self.ss.currentText()
+        e = self.se.currentText()
+        
+        if not s or not e: 
+            return  # safety check if nothing selected
+            
+        if self.is_dij:
+            t, st = self.g.dijkstra(s, e)
+            if st:
+                r = f"Time: {t//60}m {t%60}s\n"
+                r += "\n".join(f"{x['action']} {x['station']}" for x in st)
+            else:
+                r = "No route found"
+        else:
+            p = self.g.bfs(s, e)
+            if p:
+                r = f"{len(p)-1} stops\n"
+                r += "\n".join(f"Stop: {x}" for x in p)
+            else:
+                r = "No route found"
+                
+        self.out_r.setText(r)
+
+if __name__ == "__main__":
+    """
+    Main execution block. Prompts user for JSON file, 
+    loads graph and launches interface.
+    """
+    app = QApplication(sys.argv)
+    
+    #open a file dialog to choose network file
+    filepath, _ = QFileDialog.getOpenFileName(
+        None, 
+        "Select the network JSON file", 
+        "", 
+        "JSON Files (*.json);;All Files (*)"
+    )
+    
+    #if user cancels window without choosing, close app
+    if not filepath:
+        sys.exit(0)
+        
+    #  initialize graph and load selected file
+    g = TransportGraph()
+    success = g.load_from_json(filepath)
+    
+    #if file is invalid show error message and quit
+    if not success:
+        QMessageBox.critical(None, "Error", f"Could not load file:\n{filepath}")
+        sys.exit(1)
+        
+    # launch main interface
+    ex = MetroApp(g)
+    ex.show()
+    sys.exit(app.exec_())
