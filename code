@@ -1,0 +1,84 @@
+import json
+from collections import defaultdict
+
+class TransportGraph:
+    """
+    Weighted directed graph stored as an adjacency list.
+    Each node is a (station_name, line_id) tuple.
+    """
+    TRANSFER_TIME = 120  # seconds (same for all transfers)
+
+    def __init__(self):
+        self.adj: dict[tuple, list] = defaultdict(list)
+        self.stations: set[str] = set()
+        self.lines: dict[str, dict] = {}
+        self.transfer_stations: dict[str, list] = {}
+
+    def load_from_json(self, filepath: str) -> bool:
+        """Read a city JSON file and build the graph structure."""
+        try:
+            with open(filepath, encoding="utf-8") as f:
+                data = json.load(f)
+        except FileNotFoundError:
+            print(f"Error: file '{filepath}' not found.")
+            return False
+        except json.JSONDecodeError:
+            print(f"Error: '{filepath}' is not valid JSON.")
+            return False
+
+        self.lines = data.get("lignes", data.get("lines", {}))
+        default_time = data.get("temps_moyen", 90)
+
+        # 1. Ride edges (Consecutive stations)
+        for line_id, line_data in self.lines.items():
+            stations = line_data.get("stations", [])
+            for i in range(len(stations) - 1):
+                src, dst = stations[i], stations[i + 1]
+                self.stations.add(src)
+                self.stations.add(dst)
+                u, v = (src, line_id), (dst, line_id)
+                self.adj[u].append((v, default_time, "ride"))
+                self.adj[v].append((u, default_time, "ride"))
+
+        # 2. Override with explicit connections
+        for conn in data.get("connexions", data.get("connections", [])):
+            src = conn["from"]
+            dst = conn["to"]
+            t = conn["time"]
+            line = conn["line"]
+            self.stations.add(src)
+            self.stations.add(dst)
+            u, v = (src, line), (dst, line)
+            self.adj[u].append((v, t, "ride"))
+            self.adj[v].append((u, t, "ride"))
+
+        # 3. Transfer edges (Correspondances)
+        for transfer in data.get("correspondances", data.get("transfers", [])):
+            station = transfer.get("station") or transfer.get("from")
+            lines_at_station = transfer.get("lignes", transfer.get("lines", []))
+            tt = transfer.get("temps", transfer.get("transfer_time", self.TRANSFER_TIME))
+
+            if not station or not lines_at_station:
+                continue
+
+            for i, line_a in enumerate(lines_at_station):
+                for line_b in lines_at_station[i + 1:]:
+                    na, nb = (station, line_a), (station, line_b)
+                    if na in self.adj or nb in self.adj:
+                        self.adj[na].append((nb, tt, "transfer"))
+                        self.adj[nb].append((na, tt, "transfer"))
+
+            self.transfer_stations[station] = lines_at_station
+
+        print(f"Loaded: {len(self.stations)} stations, {len(self.lines)} lines.")
+        return True
+
+    def all_nodes(self) -> list[tuple]:
+        nodes = set(self.adj.keys())
+        for neighbours in self.adj.values():
+            for nb, _, _ in neighbours:
+                nodes.add(nb)
+        return list(nodes)
+
+    def nodes_for_station(self, station: str) -> list[tuple]:
+        return [n for n in self.all_nodes() if n[0] == station]
