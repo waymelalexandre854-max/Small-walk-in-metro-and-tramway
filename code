@@ -9,10 +9,10 @@ class TransportGraph:
     TRANSFER_TIME = 120  # seconds (same for all transfers)
 
     def __init__(self):
-        self.adj: dict[tuple, list] = defaultdict(list)
+        self.adj: dict[tuple, list] = defaultdict(list) #defaultdict automatically initializes an empty list
         self.stations: set[str] = set()
         self.lines: dict[str, dict] = {}
-        self.transfer_stations: dict[str, list] = {}
+        self.transfer_stations: dict[str, list] = {}  #key = station name, value= list of lines going through the station
 
     def load_from_json(self, filepath: str) -> bool:
         """Read a city JSON file and build the graph structure."""
@@ -25,11 +25,11 @@ class TransportGraph:
         except json.JSONDecodeError:
             print(f"Error: '{filepath}' is not valid JSON.")
             return False
-
+        #Extract transit lines and default average time
         self.lines = data.get("lignes", data.get("lines", {}))
         default_time = data.get("temps_moyen", 90)
 
-        # 1. Ride edges (Consecutive stations)
+        # Ride edges (Consecutive stations)
         for line_id, line_data in self.lines.items():
             stations = line_data.get("stations", [])
             for i in range(len(stations) - 1):
@@ -37,11 +37,11 @@ class TransportGraph:
                 self.stations.add(src)
                 self.stations.add(dst)
                 u, v = (src, line_id), (dst, line_id)
-                self.adj[u].append((v, default_time, "ride"))
+                self.adj[u].append((v, default_time, "ride")) #forward and backward edges
                 self.adj[v].append((u, default_time, "ride"))
 
-        # 2. Override with explicit connections
-        for conn in data.get("connexions", data.get("connections", [])):
+        # Override with explicit connections
+        for conn in data.get("connexions", data.get("connections", [])): #specific inter-station time
             src = conn["from"]
             dst = conn["to"]
             t = conn["time"]
@@ -49,10 +49,10 @@ class TransportGraph:
             self.stations.add(src)
             self.stations.add(dst)
             u, v = (src, line), (dst, line)
-            self.adj[u].append((v, t, "ride"))
+            self.adj[u].append((v, t, "ride")) #custom time
             self.adj[v].append((u, t, "ride"))
 
-        # 3. Transfer edges (Correspondances)
+        # Transfer edges (Correspondances)
         for transfer in data.get("correspondances", data.get("transfers", [])):
             station = transfer.get("station") or transfer.get("from")
             lines_at_station = transfer.get("lignes", transfer.get("lines", []))
@@ -60,10 +60,11 @@ class TransportGraph:
 
             if not station or not lines_at_station:
                 continue
-
+            #link all lines in a station
             for i, line_a in enumerate(lines_at_station):
                 for line_b in lines_at_station[i + 1:]:
                     na, nb = (station, line_a), (station, line_b)
+                    #creates a transfer edge if it exists in the active network
                     if na in self.adj or nb in self.adj:
                         self.adj[na].append((nb, tt, "transfer"))
                         self.adj[nb].append((na, tt, "transfer"))
